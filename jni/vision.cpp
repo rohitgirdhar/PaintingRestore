@@ -13,12 +13,10 @@ extern "C" {
 
 Mat findHomography(Mat orig, Mat test) {
     vector<KeyPoint> kp_orig, kp_test;
-    FAST(orig, kp_orig, 80);
-    FAST(test, kp_test, 80);
-    FREAK ext;
     Mat desc_orig, desc_test;
-    ext.compute(orig, kp_orig, desc_orig);
-    ext.compute(test, kp_test, desc_test);
+    ORB o;
+    o(orig, Mat(), kp_orig, desc_orig);
+    o(test, Mat(), kp_test, desc_test);
 
     BFMatcher matcher(NORM_HAMMING);
     vector<DMatch> matches;
@@ -107,20 +105,34 @@ void setSize(Mat orig1, Mat test1, Mat& orig, Mat& test) {
 	double facX = 1, facY = 1;
 	resize(orig1, orig, Size(0,0), facX, facY);
 	resize(test1, test, Size(0,0), facX, facY);
-	cvtColor(orig, orig, CV_BGR2GRAY);
-	cvtColor(test, test, CV_BGR2GRAY);
+
 }
 
 JNIEXPORT void JNICALL Java_com_example_paintingrestore_CameraActivity_computeOverlayPosition(JNIEnv*, jobject) {
-	__android_log_write(ANDROID_LOG_INFO, "vision.cpp", "function called in cpp");
+	//__android_log_write(ANDROID_LOG_INFO, "vision.cpp", "function called in cpp");
 }
 
-JNIEXPORT void JNICALL Java_com_rohit_bookalive_CapturedImage_computeHomography(JNIEnv*, jobject, jlong addrOrig, jlong addrImg, jlong addrH) {
+/**
+ * Rotate an image
+ */
+void rotate(cv::Mat& src, double angle, cv::Mat& dst)
+{
+    int len = std::max(src.cols, src.rows);
+    cv::Point2f pt(len/2., len/2.);
+    cv::Mat r = cv::getRotationMatrix2D(pt, angle, 1.0);
+
+    cv::warpAffine(src, dst, r, cv::Size(len, len));
+}
+
+
+JNIEXPORT void JNICALL Java_com_example_paintingrestore_CameraActivity_computeHomography(JNIEnv*, jobject, jlong addrOrig, jlong addrImg, jlong addrH) {
 	Mat& Orig1 = *(Mat*)addrOrig;
 	Mat& Img1 = *(Mat*)addrImg;
 
-	Mat Orig, Img;
-	setSize(Orig1, Img1, Orig, Img);
+	Mat Orig=Orig1, Img = Img1;
+	//setSize(Orig1, Img1, Orig, Img);
+	cvtColor(Orig, Orig, CV_BGR2GRAY);
+	cvtColor(Img, Img, CV_BGR2GRAY);
 
 	Mat& H = *(Mat*)addrH;
 	H = findHomography(Orig, Img);
@@ -129,7 +141,7 @@ JNIEXPORT void JNICALL Java_com_rohit_bookalive_CapturedImage_computeHomography(
 	__android_log_write(ANDROID_LOG_INFO, "vision.cpp-H", res);
 }
 
-JNIEXPORT void JNICALL Java_com_rohit_bookalive_Util_mapPoint(JNIEnv*, jobject, jlong addrH, jlong addrP) {
+JNIEXPORT void JNICALL Java_com_example_paintingrestore_Util_mapPoint(JNIEnv*, jobject, jlong addrH, jlong addrP) {
 	Mat& Pnt = *(Mat*)addrP;
 	Mat& H = *(Mat*)addrH;
 	Point2f p, p2;

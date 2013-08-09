@@ -5,10 +5,15 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.highgui.Highgui;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.PictureCallback;
@@ -21,6 +26,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.ImageView.ScaleType;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -30,6 +36,7 @@ public class CameraActivity extends Activity
     private Camera mCamera;
     private CameraPreview mPreview;
     private String output_fname;
+    private FrameLayout preview;
     public static final String OUTPUT_FNAME = "output";
     public static final int MEDIA_TYPE_IMAGE = 1;
     private static final String TAG = "CameraActivity";
@@ -65,7 +72,7 @@ public class CameraActivity extends Activity
         cp.setPictureSize(1280, 960);
         mCamera.setParameters(cp);
         mPreview = new CameraPreview(this, mCamera);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+        preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
@@ -127,7 +134,7 @@ public class CameraActivity extends Activity
 
 
     private void releaseCamera() {
-        if (mCamera != null){
+        if (mCamera != null) {
             mCamera.release();        // release the camera for other applications
             mCamera = null;
         }
@@ -144,18 +151,21 @@ public class CameraActivity extends Activity
         return mediaFile;
     }
     
-    public void overlayImage() {
+    public void overlayImage(double x, double y, double x2, double y2) {
+        Log.v("got", Double.toString(x) + " " + Double.toString(y));
         overlaying = true;
     	overlay.setVisibility(View.VISIBLE);
     	RelativeLayout.LayoutParams overlayParams = 
-    			new RelativeLayout.LayoutParams(100, 100);
-    	overlay.setBackgroundResource(R.drawable.anime_fire);
+    			new RelativeLayout.LayoutParams((int) Math.abs(x2-x), (int) Math.abs(y2-y));
+    	overlay.setBackgroundResource(R.drawable.original_image);
+        overlayParams.topMargin = (int) x;
+        overlayParams.leftMargin = (int) y;
     	overlay.setLayoutParams(overlayParams);
     }
     
     public void removeOverlayImage() {
-        overlaying = false;
-        overlay.setVisibility(View.INVISIBLE);
+        //overlaying = false;
+        //overlay.setVisibility(View.INVISIBLE);
     }
 
     @Override
@@ -188,7 +198,7 @@ public class CameraActivity extends Activity
         } else {
             cycles = 0;
             stable = false;
-            removeOverlayImage();
+            //removeOverlayImage();
         }
         accView.setText(Integer.toString(cycles));
     }
@@ -204,7 +214,20 @@ public class CameraActivity extends Activity
       @Override
       public void onPictureTaken(byte[] data, Camera camera) {
           saveFile(data);
-          camera.startPreview();
+          Mat image = Highgui.imread("/sdcard/PaintingRestore_test_image.jpg");
+          Mat orig = Highgui.imread("/sdcard/PaintingRestore_act_image.jpg");
+          if (image.empty() || orig.empty()) {
+              return;
+          }
+          
+          Mat H = new Mat();
+          computeHomography(orig.getNativeObjAddr(), image.getNativeObjAddr(), H.getNativeObjAddr());
+          Point p = Util.getPointOnOrig(H, new Point(0,0));
+          Point p2 = Util.getPointOnOrig(H, new Point(image.cols(),image.rows()));
+          Log.v(TAG, Double.toString(p.x) + " " + Double.toString(p.y));
+          overlayImage(p.x*preview.getHeight()/image.cols(), preview.getWidth() - (p.y)*preview.getWidth()/image.rows(), 
+                  p2.x*preview.getHeight()/image.cols(), preview.getWidth() - (p2.y)*preview.getWidth()/image.rows());
+          //camera.startPreview();
       }
     };
     
@@ -224,7 +247,9 @@ public class CameraActivity extends Activity
     
     static {
         System.loadLibrary("vision");
+        System.loadLibrary("opencv_java");
     }
     
     public native void computeOverlayPosition();
+    public native void computeHomography(long addrOrig, long addrImage, long addrH);
 }
