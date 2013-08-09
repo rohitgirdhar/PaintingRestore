@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.hardware.Camera;
+import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -39,7 +40,7 @@ public class CameraActivity extends Activity
     private boolean stable = false;  // true if display stable
     private final double ACC_THRESH = 1.3; // max acc to say "stable"
     private int cycles = 0;
-    private final int MIN_CYCLES = 8; // min num cycles to stay stable to click
+    private final int MIN_CYCLES = 12; // min num cycles to stay stable to click
     private boolean overlaying = false;
     
     @Override
@@ -165,6 +166,7 @@ public class CameraActivity extends Activity
 
     @Override
     public void onSensorChanged(SensorEvent event) {
+        computeOverlayPosition();
         float vals[] = new float[3];
         vals[0] = event.values[0];
         vals[1] = event.values[1];
@@ -177,10 +179,9 @@ public class CameraActivity extends Activity
         if (stable && net_acc < ACC_THRESH) {
             cycles ++;
             if (cycles >= MIN_CYCLES && !overlaying) {
-                //mCamera.autoFocus(autoFocusCallback);
                 stable = false;
-                cycles = 0;
-                overlayImage();
+                mCamera.autoFocus(autoFocusCallback);
+                //overlayImage();
             }
         } else if (net_acc < ACC_THRESH) {
             stable = true;
@@ -191,4 +192,39 @@ public class CameraActivity extends Activity
         }
         accView.setText(Integer.toString(cycles));
     }
+    
+    AutoFocusCallback autoFocusCallback = new AutoFocusCallback() {
+        @Override
+        public void onAutoFocus(boolean success, Camera camera) {
+            mCamera.takePicture(null, null, mPicture);
+        }
+    };
+    
+    PictureCallback mPicture = new PictureCallback() {
+      @Override
+      public void onPictureTaken(byte[] data, Camera camera) {
+          saveFile(data);
+          camera.startPreview();
+      }
+    };
+    
+    private void saveFile(byte[] data) {
+        File test_image_file = new File("/sdcard/PaintingRestore_test_image.jpg");
+        File media_file = new File(test_image_file.getAbsolutePath());
+        try {
+            FileOutputStream fos = new FileOutputStream(media_file);
+            fos.write(data);
+            fos.close();
+        } catch (FileNotFoundException e) {
+            finish();
+        } catch (IOException e) {
+            finish();
+        }
+    }
+    
+    static {
+        System.loadLibrary("vision");
+    }
+    
+    public native void computeOverlayPosition();
 }
