@@ -79,6 +79,12 @@ public class CameraActivity extends Activity
         accView = (TextView) findViewById(R.id.accView);
         accView.setTextColor(Color.WHITE);
         overlay = new ImageView(this);
+        
+        Matrix matrix=new Matrix();
+        overlay.setScaleType(ScaleType.MATRIX);   //required
+        matrix.postRotate((float) 90, 0, 0);
+        overlay.setImageMatrix(matrix);
+        
         RelativeLayout relLayout = (RelativeLayout) 
                 findViewById(R.id.cameraLayoutMain);
         relLayout.addView(overlay);
@@ -222,8 +228,8 @@ public class CameraActivity extends Activity
           
           Mat H = new Mat();
           computeHomography(orig.getNativeObjAddr(), image.getNativeObjAddr(), H.getNativeObjAddr());
-          Point p = Util.getPointOnOrig(H, new Point(0,0));
-          Point p2 = Util.getPointOnOrig(H, new Point(image.cols(),image.rows()));
+          Point p = Util.getPointOnOrig(H, new Point(0,orig.rows()));
+          Point p2 = Util.getPointOnOrig(H, new Point(orig.cols(),0));
           Log.v(TAG, Double.toString(p.x) + " " + Double.toString(p.y));
           overlayImage(p.x*preview.getHeight()/image.cols(), preview.getWidth() - (p.y)*preview.getWidth()/image.rows(), 
                   p2.x*preview.getHeight()/image.cols(), preview.getWidth() - (p2.y)*preview.getWidth()/image.rows());
