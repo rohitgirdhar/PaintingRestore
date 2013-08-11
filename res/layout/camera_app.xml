@@ -9,7 +9,17 @@
     android:id="@+id/camera_preview"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    />
+    >
+
+     
+   
+
+  </FrameLayout>
+  <ImageView
+          android:id="@+id/imageView1"
+          android:layout_width="fill_parent"
+          android:layout_height="fill_parent"
+          android:rotation="90" />
 
   <TextView
       android:id="@+id/accView"

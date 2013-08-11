@@ -52,6 +52,8 @@ public class CameraActivity extends Activity
     private final int MIN_CYCLES = 12; // min num cycles to stay stable to click
     private boolean overlaying = false;
     
+    private boolean done = false;
+    
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -196,7 +198,8 @@ public class CameraActivity extends Activity
         
         if (stable && net_acc < ACC_THRESH) {
             cycles ++;
-            if (cycles >= MIN_CYCLES && !overlaying) {
+            if (cycles >= MIN_CYCLES && !overlaying && !done) {
+                done = true;
                 stable = false;
                 mCamera.autoFocus(autoFocusCallback);
                 //overlayImage();
@@ -234,7 +237,16 @@ public class CameraActivity extends Activity
           Highgui.imwrite("/sdcard/PaintingRestore_final.jpg", image);
           
           Bitmap myBitmap = BitmapFactory.decodeFile("/sdcard/PaintingRestore_final.jpg");
-          preview.setBackgroundDrawable(new BitmapDrawable(myBitmap));
+          overlay = (ImageView) findViewById(R.id.imageView1);
+          RelativeLayout.LayoutParams overlayParams = 
+                  new RelativeLayout.LayoutParams(1000, 1000);
+          overlay.setLayoutParams(overlayParams);
+          overlay.setImageBitmap(Bitmap.createScaledBitmap(myBitmap, overlay.getHeight(), overlay.getWidth(), false));
+          //overlay.setBackgroundResource(R.drawable.original_image);
+          overlay.setScaleType(ScaleType.FIT_CENTER);
+          overlay.setVisibility(View.VISIBLE);
+          mPreview.setVisibility(View.INVISIBLE);
+          
           
         //  Point p = Util.getPointOnOrig(H, new Point(0,orig.rows()));
        //   Point p2 = Util.getPointOnOrig(H, new Point(orig.cols(),0));
