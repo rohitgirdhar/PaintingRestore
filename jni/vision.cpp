@@ -124,18 +124,44 @@ void rotate(cv::Mat& src, double angle, cv::Mat& dst)
     cv::warpAffine(src, dst, r, cv::Size(len, len));
 }
 
+void overlayImage(Mat& src, Mat& dst) {
+    for (size_t i=0; i<dst.rows; i++) {
+        for (size_t j=0; j<dst.cols; j++) {
+            Vec3b cols = src.at<Vec3b>(i,j);
+            if (cols[0] != 0 ||
+                cols[1] != 0 ||
+                cols[2] != 0) {
+                dst.at<Vec3b>(i,j) = src.at<Vec3b>(i,j);
+            }
+        }
+    }
+}
 
-JNIEXPORT void JNICALL Java_com_example_paintingrestore_CameraActivity_computeHomography(JNIEnv*, jobject, jlong addrOrig, jlong addrImg, jlong addrH) {
-	Mat& Orig1 = *(Mat*)addrOrig;
-	Mat& Img1 = *(Mat*)addrImg;
+JNIEXPORT void JNICALL Java_com_example_paintingrestore_CameraActivity_computeHomography(
+		JNIEnv*,
+		jobject,
+		jlong addrOrig,
+		jlong addrImg,
+		jlong addrH,
+		jlong addrGood
+) {
+	Mat& Orig = *(Mat*)addrOrig;
+	Mat& Img = *(Mat*)addrImg;
+	Mat& Good1 = *(Mat*)addrGood;
+	//char res2[50];
+	//sprintf(res2, "%d %d", Good1.rows, Good1.cols);
+	//__android_log_write(ANDROID_LOG_INFO, "vision.cpp-H", res2);
 
-	Mat Orig=Orig1, Img = Img1;
+	Mat Img2;
 	//setSize(Orig1, Img1, Orig, Img);
 	cvtColor(Orig, Orig, CV_BGR2GRAY);
-	cvtColor(Img, Img, CV_BGR2GRAY);
+	cvtColor(Img, Img2, CV_BGR2GRAY);
 
 	Mat& H = *(Mat*)addrH;
-	H = findHomography(Orig, Img);
+	Mat Good2;
+	H = findHomography(Orig, Img2);
+	warpPerspective(Good1, Good2, H, Img.size());
+	overlayImage(Good2, Img);
 	char res[50];
 	sprintf(res, "%lf %lf %lf", H.at<double>(0,0), H.at<double>(0,1), H.at<double>(0,2));
 	__android_log_write(ANDROID_LOG_INFO, "vision.cpp-H", res);

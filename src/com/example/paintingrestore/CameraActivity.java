@@ -6,14 +6,16 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 import org.opencv.core.Mat;
-import org.opencv.core.Point;
 import org.opencv.highgui.Highgui;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.drawable.BitmapDrawable;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.PictureCallback;
@@ -221,18 +223,24 @@ public class CameraActivity extends Activity
       public void onPictureTaken(byte[] data, Camera camera) {
           saveFile(data);
           Mat image = Highgui.imread("/sdcard/PaintingRestore_test_image.jpg");
-          Mat orig = Highgui.imread("/sdcard/PaintingRestore_act_image.jpg");
+          Mat orig = Highgui.imread("/sdcard/PaintingRestore_bad_image.jpg");
+          Mat good = Highgui.imread("/sdcard/PaintingRestore_act_image.jpg");
           if (image.empty() || orig.empty()) {
               return;
           }
           
           Mat H = new Mat();
-          computeHomography(orig.getNativeObjAddr(), image.getNativeObjAddr(), H.getNativeObjAddr());
-          Point p = Util.getPointOnOrig(H, new Point(0,orig.rows()));
-          Point p2 = Util.getPointOnOrig(H, new Point(orig.cols(),0));
-          Log.v(TAG, Double.toString(p.x) + " " + Double.toString(p.y));
-          overlayImage(p.x*preview.getHeight()/image.cols(), preview.getWidth() - (p.y)*preview.getWidth()/image.rows(), 
-                  p2.x*preview.getHeight()/image.cols(), preview.getWidth() - (p2.y)*preview.getWidth()/image.rows());
+          computeHomography(orig.getNativeObjAddr(), image.getNativeObjAddr(), H.getNativeObjAddr(), good.getNativeObjAddr());
+          Highgui.imwrite("/sdcard/PaintingRestore_final.jpg", image);
+          
+          Bitmap myBitmap = BitmapFactory.decodeFile("/sdcard/PaintingRestore_final.jpg");
+          preview.setBackgroundDrawable(new BitmapDrawable(myBitmap));
+          
+        //  Point p = Util.getPointOnOrig(H, new Point(0,orig.rows()));
+       //   Point p2 = Util.getPointOnOrig(H, new Point(orig.cols(),0));
+        //  Log.v(TAG, Double.toString(p.x) + " " + Double.toString(p.y));
+         // overlayImage(p.x*preview.getHeight()/image.cols(), preview.getWidth() - (p.y)*preview.getWidth()/image.rows(), 
+         //         p2.x*preview.getHeight()/image.cols(), preview.getWidth() - (p2.y)*preview.getWidth()/image.rows());
           //camera.startPreview();
       }
     };
@@ -257,5 +265,5 @@ public class CameraActivity extends Activity
     }
     
     public native void computeOverlayPosition();
-    public native void computeHomography(long addrOrig, long addrImage, long addrH);
+    public native void computeHomography(long addrOrig, long addrImage, long addrH, long addrGood);
 }

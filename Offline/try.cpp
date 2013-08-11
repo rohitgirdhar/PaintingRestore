@@ -52,7 +52,18 @@ void setSize(Mat orig1, Mat test1, Mat& orig, Mat& test) {
     //cvtColor(test, test, CV_BGR2GRAY);
 }
 
-
+void overlayImage(Mat& src, Mat& dst) {
+    for (size_t i=0; i<dst.rows; i++) {
+        for (size_t j=0; j<dst.cols; j++) {
+            Vec3b cols = src.at<Vec3b>(i,j);
+            if (cols[0] != 0 ||
+                cols[1] != 0 ||
+                cols[2] != 0) {
+                dst.at<Vec3b>(i,j) = src.at<Vec3b>(i,j);
+            }
+        }
+    }
+}
 
 
 
@@ -128,10 +139,20 @@ int main( int argc, char** argv )
     scene.push_back( keypoints_scene[ good_matches[i].trainIdx ].pt );
   }
 
-  Mat image_object1, image_scene1;
+  Mat image_object1, image_scene1, img_object2;
   setSize(img_object, img_scene, image_object1, image_scene1);
   Mat H = findHomography( image_object1, image_scene1);
   cout<<H<<endl;
+
+  warpPerspective(image_object1, img_object2, H, img_scene.size());
+  imshow("test", img_object2);
+  waitKey(0);
+ 
+  Mat added = img_scene;
+  overlayImage(img_object2, added);
+  imshow("test2", added);
+  waitKey(0);
+
   cout<<H.at<double>(0,0)<<" "<<H.at<double>(0,1)<<" "<<H.at<double>(0,2)<<endl;
 
   //-- Get the corners from the image_1 ( the object to be "detected" )
