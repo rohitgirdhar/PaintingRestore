@@ -11,11 +11,11 @@ import org.opencv.highgui.Highgui;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Matrix;
-import android.graphics.drawable.BitmapDrawable;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.PictureCallback;
@@ -51,6 +51,7 @@ public class CameraActivity extends Activity
     private int cycles = 0;
     private final int MIN_CYCLES = 12; // min num cycles to stay stable to click
     private boolean overlaying = false;
+    private Intent displayIntent;
     
     private boolean done = false;
     
@@ -88,6 +89,8 @@ public class CameraActivity extends Activity
         overlay.setScaleType(ScaleType.MATRIX);   //required
         matrix.postRotate((float) 90, 0, 0);
         overlay.setImageMatrix(matrix);
+        displayIntent = new Intent(this, ImageDisplay.class);
+        displayIntent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
         
         RelativeLayout relLayout = (RelativeLayout) 
                 findViewById(R.id.cameraLayoutMain);
@@ -228,6 +231,10 @@ public class CameraActivity extends Activity
           Mat image = Highgui.imread("/sdcard/PaintingRestore_test_image.jpg");
           Mat orig = Highgui.imread("/sdcard/PaintingRestore_bad_image.jpg");
           Mat good = Highgui.imread("/sdcard/PaintingRestore_act_image.jpg");
+          if (image.empty() || orig.empty() || good.empty()) {
+              Log.e("CameraActivity", "Some/more files missing");
+              return;
+          }
           if (image.empty() || orig.empty()) {
               return;
           }
@@ -236,16 +243,11 @@ public class CameraActivity extends Activity
           computeHomography(orig.getNativeObjAddr(), image.getNativeObjAddr(), H.getNativeObjAddr(), good.getNativeObjAddr());
           Highgui.imwrite("/sdcard/PaintingRestore_final.jpg", image);
           
-          Bitmap myBitmap = BitmapFactory.decodeFile("/sdcard/PaintingRestore_final.jpg");
-          overlay = (ImageView) findViewById(R.id.imageView1);
-          RelativeLayout.LayoutParams overlayParams = 
-                  new RelativeLayout.LayoutParams(1000, 1000);
-          overlay.setLayoutParams(overlayParams);
-          overlay.setImageBitmap(Bitmap.createScaledBitmap(myBitmap, overlay.getHeight(), overlay.getWidth(), false));
-          //overlay.setBackgroundResource(R.drawable.original_image);
-          overlay.setScaleType(ScaleType.FIT_CENTER);
-          overlay.setVisibility(View.VISIBLE);
-          mPreview.setVisibility(View.INVISIBLE);
+          
+          startActivity(displayIntent);
+          
+          
+         // mPreview.setVisibility(View.INVISIBLE);
           
           
         //  Point p = Util.getPointOnOrig(H, new Point(0,orig.rows()));
